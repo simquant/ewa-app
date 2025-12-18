@@ -6,38 +6,42 @@ from typing import List
 
 app = FastAPI()
 
-# Khởi tạo model
-# Lưu ý: Vì ta đã lưu dạng Booster, ta sẽ load dạng Booster để tránh lỗi
+# Load Model
 model = xgb.Booster()
-
 try:
     model.load_model("liquidity_predictor_v1.json")
-    print(">>> THANH CONG: Da load model len Server!")
+    print(">>> DA LOAD MODEL THANH CONG!")
 except Exception as e:
-    print(f">>> LOI: Khong load duoc model. Chi tiet: {e}")
+    print(f">>> LOI LOAD MODEL: {e}")
 
-# Định nghĩa dữ liệu đầu vào (Input)
 class InputData(BaseModel):
-    features: List[float] # Nhận vào list các con số
+    features: List[float]
 
 @app.get("/")
 def home():
-    return {"message": "Server EWA dang chay ngon lanh!"}
+    return {"message": "EWA AI Service is Running!"}
 
 @app.post("/predict")
 def predict(data: InputData):
     try:
-        # Chuyển dữ liệu thành định dạng DMatrix (của XGBoost)
+        # 1. Chuyển list thành mảng numpy
         input_vector = np.array([data.features])
-        dmatrix = xgb.DMatrix(input_vector)
         
-        # Dự báo
+        # 2. QUAN TRỌNG: Khai báo tên cột (Feature Names) cho khớp với lúc Train
+        # Thứ tự phải y hệt trong file create_model.py
+        feature_names = ['Doanh_thu', 'Chi_phi', 'Ton_kho', 'Lai_suat']
+        
+        # 3. Tạo DMatrix có gắn tên cột
+        dmatrix = xgb.DMatrix(input_vector, feature_names=feature_names)
+        
+        # 4. Dự báo
         prediction = model.predict(dmatrix)[0]
         
         return {
             "status": "success",
             "predicted_cash": float(prediction),
-            "currency": "VND"
+            "currency": "VND",
+            "note": "Du bao dua tren mo hinh tai chinh EWA"
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}
